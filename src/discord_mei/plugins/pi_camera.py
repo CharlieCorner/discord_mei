@@ -21,7 +21,8 @@ class PiCamera(Plugin):
             await self.mei.say("No Pi Camera module is installed :cry:")
             return
         else:
-            camera = picamera.PiCamera()
-            camera.capture(file)
+            with picamera.PiCamera() as camera:
+                camera.capture(file)
+
             await self.mei.say("Yay! It is supported!")
             await self.mei.send_file(ctx.message.channel, file)
