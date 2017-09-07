@@ -6,5 +6,4 @@ class StopMei(Plugin):
     @command("stop", pass_context=True)
     async def stop(self, ctx):
         await self.mei.say("Stopping, bye bye!")
-        self.mei.
         raise KeyboardInterrupt
