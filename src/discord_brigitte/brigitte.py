@@ -35,9 +35,7 @@ class Brigitte(Bot):
 
     async def on_ready(self):
         LOGGER.info('Logged in as')
-        self.change_nickname()
         LOGGER.info(self.user.name)
-        self.user.name = "brigitte-ordel"
         LOGGER.info(self.user.id)
         LOGGER.info('------')
         LOGGER.info("I will be your shield! Ready for combat!")
