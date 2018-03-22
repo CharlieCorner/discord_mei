@@ -6,7 +6,7 @@ except ImportError:
 
 
 from discord.ext.commands import command
-from discord_mei.plugins.plugin import Plugin
+from discord_brigitte.plugins.plugin import Plugin
 
 
 class PiCamera(Plugin):
@@ -18,11 +18,11 @@ class PiCamera(Plugin):
         file = "../../resources/images/cheese.jpg"
 
         if not IS_PICAMERA_SUPPORTED:
-            await self.mei.say("No Pi Camera module is installed :cry:")
+            await self.brigitte.say("No Pi Camera module is installed :cry:")
             return
         else:
             with picamera.PiCamera() as camera:
                 camera.capture(file)
 
-            await self.mei.say("Yay! It is supported!")
-            await self.mei.send_file(ctx.message.channel, file)
+            await self.brigitte.say("Yay! It is supported!")
+            await self.brigitte.send_file(ctx.message.channel, file)

@@ -1,5 +1,5 @@
 from discord.ext.commands import command
-from discord_mei.plugins.plugin import Plugin
+from discord_brigitte.plugins.plugin import Plugin
 
 class PocPlayMusic(Plugin):
 
@@ -13,7 +13,7 @@ class PocPlayMusic(Plugin):
         file = "../../resources/music/%s.mp3" % song_id
 
         if self.voice is None:
-            self.voice = await self.mei.join_voice_channel(self.mei.get_channel(self.mei.voice_channel_id))
+            self.voice = await self.brigitte.join_voice_channel(self.brigitte.get_channel(self.brigitte.voice_channel_id))
 
         if self.voice.is_connected():
             player = self.voice.create_ffmpeg_player(file)

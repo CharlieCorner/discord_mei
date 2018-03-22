@@ -3,9 +3,9 @@ import discord
 from discord.ext import commands
 from discord import Client
 
-TOKEN = os.getenv('MEIORDEL_TOKEN')
-MEI_CHANNEL = os.getenv("MEIORDEL_CHANNEL")
-MEI_VOICE_CHANNEL = os.getenv("MEIORDEL_VOICE_CHANNEL")
+TOKEN = os.getenv('BRIGITTEORDEL_TOKEN')
+BRIGITTE_CHANNEL = os.getenv("BRIGITTEORDEL_CHANNEL")
+BRIGITTE_VOICE_CHANNEL = os.getenv("BRIGITTEORDEL_VOICE_CHANNEL")
 
 description = '''A personal assistant disguised as a Discord bot'''
 bot = commands.Bot(command_prefix='m!', description=description)
@@ -49,7 +49,7 @@ async def sendpic(id: int):
         file += "%i.png" % id
 
     await bot.say("Fetching %s" % file)
-    await bot.send_file(bot.get_channel(MEI_CHANNEL), file)
+    await bot.send_file(bot.get_channel(BRIGITTE_CHANNEL), file)
 
 
 @bot.command()
@@ -57,7 +57,7 @@ async def playmusic(args):
     global voice
     file = "../../../../../resources/music/%s.mp3" % args
     if voice is None:
-        voice = await bot.join_voice_channel(bot.get_channel(MEI_VOICE_CHANNEL))
+        voice = await bot.join_voice_channel(bot.get_channel(BRIGITTE_VOICE_CHANNEL))
 
     if voice.is_connected():
         player = voice.create_ffmpeg_player(file)
