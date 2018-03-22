@@ -91,5 +91,5 @@ ENV/
 
 # IntelliJ
 *.iml
-.idea/
+*.idea/
 
