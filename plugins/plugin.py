@@ -2,7 +2,7 @@ import logging
 
 import discord
 
-LOGGER = logging.getLogger("discord_brigitte.%s" % __name__)
+LOGGER = logging.getLogger("discord_mei.%s" % __name__)
 
 
 class PluginMount(type):
@@ -18,8 +18,8 @@ class PluginMount(type):
 
 class Plugin(metaclass=PluginMount):
 
-    def __init__(self, brigitte):
-        self.brigitte = brigitte
+    def __init__(self, mei):
+        self.mei = mei
         self.commands = None
 
     def get_commands(self):

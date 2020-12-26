@@ -1,7 +1,9 @@
 import os.path
 
 from discord.ext.commands import command
-from discord_brigitte.plugins.plugin import Plugin
+
+from plugins.plugin import Plugin
+
 
 class SendPic(Plugin):
 
@@ -15,7 +17,7 @@ class SendPic(Plugin):
             file += "%i.png" % id
 
         if not os.path.isfile(file):
-            return await self.brigitte.say("%s doesn't exist bucko!" % file)
+            return await self.mei.say("%s doesn't exist bucko!" % file)
 
-        await self.brigitte.say("Fetching %s" % file)
-        await self.brigitte.send_file(ctx.message.channel, file)
+        await self.mei.say("Fetching %s" % file)
+        await self.mei.send_file(ctx.message.channel, file)
