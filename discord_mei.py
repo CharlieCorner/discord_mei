@@ -3,13 +3,15 @@ import os
 import sys
 
 import aiohttp
+from discord.ext import commands
 from discord.ext.commands import Bot
 
-from plugins.plugin_manager import PluginManager
+from cogs.basic_voice import Music
+from cogs.security import Security
 
 TOKEN = os.environ.get('MEIORDEL_TOKEN')
-MEI_CHANNEL = os.environ.get("MEIORDEL_CHANNEL")
-MEI_VOICE_CHANNEL = os.environ.get("MEIORDEL_VOICE_CHANNEL")
+#MEI_CHANNEL = os.environ.get("MEIORDEL_CHANNEL")
+#MEI_VOICE_CHANNEL = os.environ.get("MEIORDEL_VOICE_CHANNEL")
 
 COMMAND_PREFIX = "m!"
 DESCRIPTION = "A personal assistant disguised as a Discord bot"
@@ -21,9 +23,7 @@ LOGGER = logging.getLogger("discord_mei.%s" % __name__)
 class Mei(Bot):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.plugin_manager = PluginManager(self)
-        self.plugin_manager.load_all()
-        self.voice_channel_id = MEI_VOICE_CHANNEL
+        #self.voice_channel_id = MEI_VOICE_CHANNEL
 
     async def on_ready(self):
         LOGGER.info('Logged in as')
@@ -51,11 +51,15 @@ def configure_logging(is_debug=False):
 
 def main():
     configure_logging()
-    bot = Mei(command_prefix=COMMAND_PREFIX,
+    bot = Mei(command_prefix=commands.when_mentioned_or(COMMAND_PREFIX),
               description=DESCRIPTION,
               pm_help=True,
-              connector=aiohttp.TCPConnector(verify_ssl=False))
+              connector=aiohttp.TCPConnector(ssl=False))
     LOGGER.info("Running Mei!")
+
+    bot.add_cog(Security(bot))
+    bot.add_cog(Music(bot))
+
     bot.run(TOKEN)
 
 
