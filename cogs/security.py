@@ -19,7 +19,6 @@ class Security(commands.Cog):
         self.bot = bot
         self.pyaudio = pyaudio.PyAudio()
         self.stream = None
-        self.buffer = []
 
     @commands.command()
     @commands.is_owner()
@@ -38,8 +37,7 @@ class Security(commands.Cog):
                                             rate=OpusEncoder.SAMPLING_RATE,
                                             input=True,
                                             output=False,
-                                            #frames_per_buffer=OpusEncoder.FRAME_SIZE,
-                                            frames_per_buffer=5000,
+                                            frames_per_buffer=OpusEncoder.SAMPLES_PER_FRAME,
                                             stream_callback=send_data_to_channel,
                                             start=False
                                             )
