@@ -9,11 +9,7 @@ LOGGER = logging.getLogger("discord_mei.%s" % __name__)
 
 class Security(commands.Cog):
 
-    CHUNK = 1024
     WIDTH = 2
-    CHANNELS = 2
-    RATE = 44100
-    RECORD_SECONDS = 7
 
     def __init__(self, bot):
         self.bot = bot
@@ -61,7 +57,7 @@ class Security(commands.Cog):
 
         if self.stream and self.stream.is_active():
             LOGGER.info("Stopping stream...")
-            await ctx.send(f"Stopping stream in channel {ctx.voice_client.channel.name}...", delete_after=15)
+            await ctx.send("Stopping stream in channel {}...".format(ctx.voice_client.channel.name), delete_after=15)
 
             self.stream.stop_stream()
             self.stream.close()
