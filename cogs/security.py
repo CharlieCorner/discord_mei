@@ -9,12 +9,14 @@ LOGGER = logging.getLogger("discord_mei.%s" % __name__)
 
 class Security(commands.Cog):
 
+    MIC_CHANNELS = 1
     WIDTH = 2
 
     def __init__(self, bot):
         self.bot = bot
         self.pyaudio = pyaudio.PyAudio()
         self.stream = None
+        self.custom_encoder = CustomizableOpusEncoder(channels=Security.MIC_CHANNELS)
 
     @commands.command()
     @commands.is_owner()
@@ -29,11 +31,11 @@ class Security(commands.Cog):
         async with ctx.typing():
 
             self.stream = self.pyaudio.open(format=self.pyaudio.get_format_from_width(Security.WIDTH),
-                                            channels=OpusEncoder.CHANNELS,
-                                            rate=OpusEncoder.SAMPLING_RATE,
+                                            channels=self.custom_encoder.CHANNELS,
+                                            rate=self.custom_encoder.SAMPLING_RATE,
                                             input=True,
                                             output=False,
-                                            frames_per_buffer=OpusEncoder.SAMPLES_PER_FRAME,
+                                            frames_per_buffer=self.custom_encoder.SAMPLES_PER_FRAME,
                                             stream_callback=send_data_to_channel,
                                             start=False
                                             )
@@ -45,7 +47,7 @@ class Security(commands.Cog):
         await ctx.send('Now streaming on voice channel: {}'.format(ctx.voice_client.channel.name))
         await ctx.message.delete()
 
-    @commands.command()
+    @commands.command(aliases=["mic_stop"])
     @commands.is_owner()
     async def stop_mic(self, ctx):
 
@@ -82,8 +84,31 @@ class Security(commands.Cog):
         elif ctx.voice_client.is_playing():
             ctx.voice_client.stop()
 
-        if not ctx.voice_client.encoder:
-            ctx.voice_client.encoder = OpusEncoder()
+        if not ctx.voice_client.encoder or not isinstance(ctx.voice_client.encoder, CustomizableOpusEncoder):
+            ctx.voice_client.encoder = self.custom_encoder
 
         await self._stop_stream(ctx)
+
+
+class CustomizableOpusEncoder(OpusEncoder):
+
+    BIT_RATE = 16   # This is the bitrate that Discord.py uses by default for the calculation of the sample_size
+
+    def __init__(self,
+                 sampling_rate: int = OpusEncoder.SAMPLING_RATE,
+                 channels: int = OpusEncoder.CHANNELS,
+                 frame_length: int = OpusEncoder.FRAME_LENGTH
+                 ):
+
+        self.SAMPLING_RATE = sampling_rate
+        self.CHANNELS = channels
+        self.FRAME_LENGTH = frame_length
+
+        # Dependant variables
+        self.SAMPLE_SIZE = int(self.BIT_RATE / 8) * self.CHANNELS
+        self.SAMPLES_PER_FRAME = int(self.SAMPLING_RATE / 1000 * self.FRAME_LENGTH)
+        self.FRAME_SIZE = self.SAMPLES_PER_FRAME * self.SAMPLE_SIZE
+
+        # Let the original encoder continue with the configuration
+        super().__init__()
 
