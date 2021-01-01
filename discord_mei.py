@@ -6,7 +6,6 @@ import aiohttp
 from discord.ext import commands
 from discord.ext.commands import Bot
 
-from cogs.basic_voice import Music
 from cogs.security import Security
 
 TOKEN = os.environ.get('MEIORDEL_TOKEN')
@@ -58,7 +57,6 @@ def main():
     LOGGER.info("Running Mei!")
 
     bot.add_cog(Security(bot))
-    bot.add_cog(Music(bot))
 
     bot.run(TOKEN)
 

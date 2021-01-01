@@ -1,5 +1,6 @@
 import logging
 
+import numpy as np
 import pyaudio
 from discord.ext import commands
 from discord.opus import Encoder as OpusEncoder
@@ -11,12 +12,14 @@ class Security(commands.Cog):
 
     MIC_CHANNELS = 1
     WIDTH = 2
+    DEFAULT_VOLUME = 100
 
     def __init__(self, bot):
         self.bot = bot
         self.pyaudio = pyaudio.PyAudio()
         self.stream = None
         self.custom_encoder = CustomizableOpusEncoder(channels=Security.MIC_CHANNELS)
+        self.volume = Security.DEFAULT_VOLUME
 
     @commands.command()
     @commands.is_owner()
@@ -24,7 +27,13 @@ class Security(commands.Cog):
 
         def send_data_to_channel(in_data, frame_count, time_info, status):
 
-            ctx.voice_client.send_audio_packet(in_data, encode=True)
+            # Set the volume level by transforming the data to a numpy array
+            sound_level = (self.volume / 100.)
+
+            chunk = np.fromstring(in_data, np.int16) * sound_level
+            chunk = chunk.astype(np.int16)
+
+            ctx.voice_client.send_audio_packet(chunk.tobytes(), encode=True)
 
             return in_data, pyaudio.paContinue
 
@@ -47,6 +56,17 @@ class Security(commands.Cog):
         await ctx.send('Now streaming on voice channel: {}'.format(ctx.voice_client.channel.name))
         await ctx.message.delete()
 
+    @commands.command()
+    @commands.is_owner()
+    async def volume(self, ctx, new_volume: int):
+        # Volume should be between 1-300
+        new_volume = max(min(300, new_volume), 1)
+
+        await ctx.message.delete()
+        self.volume = new_volume
+
+        await ctx.send("Setting the volume to: {}".format(new_volume), delete_after=10)
+
     @commands.command(aliases=["mic_stop"])
     @commands.is_owner()
     async def stop_mic(self, ctx):
@@ -64,6 +84,8 @@ class Security(commands.Cog):
             self.stream.stop_stream()
             self.stream.close()
             self.stream = None
+
+            self.volume = Security.DEFAULT_VOLUME
 
             LOGGER.info("Disconnecting bot from voice channel...")
             await ctx.voice_client.disconnect()
@@ -111,4 +133,3 @@ class CustomizableOpusEncoder(OpusEncoder):
 
         # Let the original encoder continue with the configuration
         super().__init__()
-
