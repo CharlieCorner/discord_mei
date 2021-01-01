@@ -76,6 +76,7 @@ def wire_input_output_unblocking():
 def record_from_mic():
     import pyaudio
     import wave
+    from discord.opus import Encoder as OpusEncoder
 
     FORMAT = pyaudio.paInt16
     CHANNELS = 1
@@ -87,28 +88,54 @@ def record_from_mic():
     audio = pyaudio.PyAudio()
 
     # start Recording
-    stream = audio.open(format=FORMAT, channels=CHANNELS,
-                        rate=RATE, input=True,
-                        frames_per_buffer=CHUNK)
-    print("recording...")
+    # stream = audio.open(format=FORMAT,
+    #                     channels=CHANNELS,
+    #                     rate=RATE,
+    #                     input=True,
+    #                     frames_per_buffer=CHUNK)
+
     frames = []
 
-    for i in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
-        data = stream.read(CHUNK)
-        frames.append(data)
+    def send_data_to_channel(in_data, frame_count, time_info, status):
+        frames.append(in_data)
+
+        return in_data, pyaudio.paContinue
+
+    stream = audio.open(format=audio.get_format_from_width(2),
+                        channels=1,
+                        rate=OpusEncoder.SAMPLING_RATE,
+                        input=True,
+                        output=False,
+                        frames_per_buffer=OpusEncoder.SAMPLES_PER_FRAME,
+                        stream_callback=send_data_to_channel,
+                        start=False
+                        )
+
+    try:
+        print("recording...")
+        stream.start_stream()
+
+        while stream.is_active():
+            time.sleep(0.1)
+
+    except KeyboardInterrupt:
+        stream.stop_stream()
+        stream.close()
+        audio.terminate()
+
     print("finished recording")
 
-    # stop Recording
-    stream.stop_stream()
-    stream.close()
-    audio.terminate()
+    print("Channels: {}".format(CHANNELS))
+    print("Width: {}".format(audio.get_sample_size(FORMAT)))
+    print("Rate: {}".format(OpusEncoder.SAMPLING_RATE))
+    print("Frames per buffer: {}".format(OpusEncoder.SAMPLES_PER_FRAME))
 
-    waveFile = wave.open(WAVE_OUTPUT_FILENAME, 'wb')
-    waveFile.setnchannels(CHANNELS)
-    waveFile.setsampwidth(audio.get_sample_size(FORMAT))
-    waveFile.setframerate(RATE)
-    waveFile.writeframes(b''.join(frames))
-    waveFile.close()
+    wave_file = wave.open(WAVE_OUTPUT_FILENAME, 'wb')
+    wave_file.setnchannels(CHANNELS)
+    wave_file.setsampwidth(audio.get_sample_size(FORMAT))
+    wave_file.setframerate(OpusEncoder.SAMPLING_RATE)
+    wave_file.writeframes(b''.join(frames))
+    wave_file.close()
 
 
 if __name__ == '__main__':
