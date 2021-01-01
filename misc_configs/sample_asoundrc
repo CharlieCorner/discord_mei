@@ -1,0 +1,27 @@
+# This .asoundrc file can be helpful in order to use Software-powered volume controls. This is useful for those Mics
+#  that do not support a lot of dB gains out of the box. It's use is optional and should only be used in case the mic
+#  input in ALSA-based systems is too low
+
+# Configure ALSA to use the softvolmic plug as the default capture device
+pcm.!default {
+  type asym
+  capture.pcm "softvolmic"
+}
+
+pcm.mic {
+  type plug
+  slave {
+    pcm "hw:1,0"
+  }
+}
+
+# The softvolmic device gets its input from the slave.pcm, which along with control.card need to be adjusted to point
+#  to the relevant microphone on the system, this can be inspected with 'arecord -l'
+pcm.softvolmic {
+    type            softvol
+    slave.pcm       "hw:1,0"
+    control.name    "Softvol Master"
+    control.card    0
+    min_dB      -10.0
+    max_dB      50.0
+}
