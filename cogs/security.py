@@ -60,7 +60,7 @@ class Security(commands.Cog):
     @commands.is_owner()
     async def volume(self, ctx, new_volume: int):
         # Volume should be between 1-300
-        new_volume = max(min(300, new_volume), 1)
+        new_volume = max(min(200, new_volume), 10)
 
         await ctx.message.delete()
         self.volume = new_volume
