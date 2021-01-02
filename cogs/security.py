@@ -2,6 +2,7 @@ import logging
 
 import numpy as np
 import pyaudio
+from discord import Member, VoiceState, VoiceChannel
 from discord.ext import commands
 from discord.opus import Encoder as OpusEncoder
 
@@ -20,6 +21,10 @@ class Security(commands.Cog):
         self.stream = None
         self.custom_encoder = CustomizableOpusEncoder(channels=Security.MIC_CHANNELS)
         self.volume = Security.DEFAULT_VOLUME
+        self.active_voice_channel = None
+
+        # Add event listeners
+        self.bot.add_listener(self.on_voice_state_update)
 
     @commands.command()
     @commands.is_owner()
@@ -84,6 +89,7 @@ class Security(commands.Cog):
             self.stream.stop_stream()
             self.stream.close()
             self.stream = None
+            self.active_voice_channel = None
 
             self.volume = Security.DEFAULT_VOLUME
 
@@ -99,10 +105,12 @@ class Security(commands.Cog):
 
         if ctx.voice_client is None:
             if ctx.author.voice:
-                await ctx.author.voice.channel.connect()
+                self.active_voice_channel = ctx.author.voice.channel
+                await self.active_voice_channel.connect()
             else:
                 await ctx.send("You are not connected to a voice channel.")
                 raise commands.CommandError("Author not connected to a voice channel.")
+
         elif ctx.voice_client.is_playing():
             ctx.voice_client.stop()
 
@@ -110,6 +118,53 @@ class Security(commands.Cog):
             ctx.voice_client.encoder = self.custom_encoder
 
         await self._stop_stream(ctx)
+
+    async def on_voice_state_update(self, member: Member, before: VoiceState, after: VoiceState):
+
+        LOGGER.debug("Got on_voice_state_update!!")
+
+        if not self.active_voice_channel:
+            LOGGER.debug("No active voice channel!")
+            return
+
+        b4_channel = before.channel
+
+        conditions_to_disconnect = [self._is_bot_alone_in_channel(self.active_voice_channel),
+                                    (self.stream and self.stream.is_active),
+                                    (b4_channel and self.active_voice_channel.id == b4_channel.id),
+                                    ]
+
+        LOGGER.debug("Checking if we should disconnect with: {}".format(conditions_to_disconnect))
+
+        if all(conditions_to_disconnect):
+
+            LOGGER.info("Disconnecting bot from voice channel {}...".format(self.active_voice_channel.name))
+
+            self.stream.stop_stream()
+            self.stream.close()
+            self.stream = None
+
+            self.volume = Security.DEFAULT_VOLUME
+
+            for vc in self.bot.voice_clients:
+                if vc.channel.id == self.active_voice_channel.id:
+                    LOGGER.debug("Disconnecting from channel {}".format(vc.channel.id))
+                    await vc.disconnect()
+
+            self.active_voice_channel = None
+
+    def _is_bot_alone_in_channel(self, voice_channel: VoiceChannel):
+        num_connected_members = len(voice_channel.members)
+
+        if num_connected_members >= 2:
+            return False
+        else:
+            if num_connected_members == 0:
+                return True
+            else:
+                lonely_member = voice_channel.members[0]
+
+                return lonely_member.id == self.bot.user.id
 
 
 class CustomizableOpusEncoder(OpusEncoder):
