@@ -31,6 +31,9 @@ class Mei(Bot):
         LOGGER.info('------')
         LOGGER.info("I will be your shield! Ready for combat!")
 
+    async def on_command_error(self, context, exception):
+        LOGGER.error("An unexpected error happened during {}'s execution".format(self.user.name), exception)
+
 
 def configure_logging(is_debug=False):
     log_format = "%(asctime)s [%(name)s] [%(levelname)s] %(message)s"

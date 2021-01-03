@@ -29,6 +29,9 @@ class Security(commands.Cog):
     @commands.command()
     @commands.is_owner()
     async def mic(self, ctx):
+        """
+        Start streaming from a hardware microphone in the voice chat in which the owner is currently connected
+        """
 
         def send_data_to_channel(in_data, frame_count, time_info, status):
 
@@ -64,7 +67,10 @@ class Security(commands.Cog):
     @commands.command()
     @commands.is_owner()
     async def volume(self, ctx, new_volume: int):
-        # Volume should be between 1-300
+        """
+        Controls the volume of the stream it should be a value [1-200]
+        """
+        # Volume should be between 1-200
         new_volume = max(min(200, new_volume), 10)
 
         await ctx.message.delete()
@@ -75,23 +81,27 @@ class Security(commands.Cog):
     @commands.command(aliases=["mic_stop"])
     @commands.is_owner()
     async def stop_mic(self, ctx):
+        """Stops the stream of the microphone (if there is any one active)"""
 
         await ctx.message.delete()
 
-        await self._stop_stream(ctx, notify_on_no_stream=True)
+        await self._disconnect_stream(ctx, notify_on_no_stream=True)
 
-    async def _stop_stream(self, ctx, notify_on_no_stream: bool = False):
+    def _stop_and_reset_stream_state(self):
+        self.stream.stop_stream()
+        self.stream.close()
+        self.stream = None
+        self.active_voice_channel = None
+
+        self.volume = Security.DEFAULT_VOLUME
+
+    async def _disconnect_stream(self, ctx, notify_on_no_stream: bool = False):
 
         if self.stream and self.stream.is_active():
             LOGGER.info("Stopping stream...")
             await ctx.send("Stopping stream in channel {}...".format(ctx.voice_client.channel.name), delete_after=15)
 
-            self.stream.stop_stream()
-            self.stream.close()
-            self.stream = None
-            self.active_voice_channel = None
-
-            self.volume = Security.DEFAULT_VOLUME
+            self._stop_and_reset_stream_state()
 
             LOGGER.info("Disconnecting bot from voice channel...")
             await ctx.voice_client.disconnect()
@@ -100,26 +110,39 @@ class Security(commands.Cog):
             if notify_on_no_stream:
                 await ctx.send("No stream is currently active!", delete_after=10)
 
+    async def _connect_to_author_voice_channel(self, ctx):
+        if ctx.author.voice:
+            self.active_voice_channel = ctx.author.voice.channel
+            await self.active_voice_channel.connect()
+        else:
+            await ctx.send("You are not connected to a voice channel.")
+            raise commands.CommandError("Author not connected to a voice channel.")
+
     @mic.before_invoke
     async def invoking_validation(self, ctx):
+        """A stream can only proceed if it is connected to a voice channel and a stream is not active."""
 
         if ctx.voice_client is None:
-            if ctx.author.voice:
-                self.active_voice_channel = ctx.author.voice.channel
-                await self.active_voice_channel.connect()
-            else:
-                await ctx.send("You are not connected to a voice channel.")
-                raise commands.CommandError("Author not connected to a voice channel.")
+            LOGGER.info("{} is not connected to a voice channel, connecting to {}'s channel...".format(
+                self.bot.user.name,
+                ctx.author.name))
 
-        elif ctx.voice_client.is_playing():
+        elif ctx.voice_client.is_playing() or (self.stream and self.stream.is_active()):
+            LOGGER.info("A stream was already playing, resetting and reconnecting to {}'s channel".format(
+                ctx.author.name))
+            # Reset the stream to move to wherever the author is (if they are)
+
             ctx.voice_client.stop()
+            await self._disconnect_stream(ctx)
 
+        await self._connect_to_author_voice_channel(ctx)
+
+        # Make sure that the Opus encoder is always a Customizable one
         if not ctx.voice_client.encoder or not isinstance(ctx.voice_client.encoder, CustomizableOpusEncoder):
             ctx.voice_client.encoder = self.custom_encoder
 
-        await self._stop_stream(ctx)
-
     async def on_voice_state_update(self, member: Member, before: VoiceState, after: VoiceState):
+        """Check if the bot is the only one left in the voice channel, if it is, disconnect it"""
 
         LOGGER.debug("Got on_voice_state_update!!")
 
@@ -128,26 +151,24 @@ class Security(commands.Cog):
             return
 
         b4_channel = before.channel
+        active_voice_id = self.active_voice_channel.id
 
         conditions_to_disconnect = [self._is_bot_alone_in_channel(self.active_voice_channel),
                                     (self.stream and self.stream.is_active),
-                                    (b4_channel and self.active_voice_channel.id == b4_channel.id),
+                                    (b4_channel and active_voice_id == b4_channel.id),
                                     ]
 
         LOGGER.debug("Checking if we should disconnect with: {}".format(conditions_to_disconnect))
 
         if all(conditions_to_disconnect):
 
-            LOGGER.info("Disconnecting bot from voice channel {}...".format(self.active_voice_channel.name))
+            LOGGER.info("Auto-disconnecting bot from voice channel, it was alone in channel {} :(...".format(
+                self.active_voice_channel.name))
 
-            self.stream.stop_stream()
-            self.stream.close()
-            self.stream = None
-
-            self.volume = Security.DEFAULT_VOLUME
+            self._stop_and_reset_stream_state()
 
             for vc in self.bot.voice_clients:
-                if vc.channel.id == self.active_voice_channel.id:
+                if vc.channel.id == active_voice_id:
                     LOGGER.debug("Disconnecting from channel {}".format(vc.channel.id))
                     await vc.disconnect()
 
