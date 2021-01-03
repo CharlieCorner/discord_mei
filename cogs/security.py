@@ -68,7 +68,7 @@ class Security(commands.Cog):
     @commands.is_owner()
     async def volume(self, ctx, new_volume: int):
         """
-        Controls the volume of the stream it should be a value [1-200]
+        Controls the volume of the stream it must be a value [1-200]
         """
         # Volume should be between 1-200
         new_volume = max(min(200, new_volume), 10)
